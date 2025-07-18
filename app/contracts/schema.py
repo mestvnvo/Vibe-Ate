@@ -14,3 +14,4 @@ class InsertResult(BaseModel):
     inserted: int
     skipped: int
     status: str
+    message: str
