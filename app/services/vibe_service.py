@@ -3,9 +3,56 @@ from app.db.database import SessionLocal
 from app.db.models import Song as SongModel, VectorEmbedding
 from app.contracts.schema import SongWithEmbedding, InsertResult
 
-async def get_songs_from_image(image):
-    # TODO: implement embedding extraction and similarity search
-    return ["fake_song_1", "fake_song_2"]
+from fastapi import UploadFile
+from app.services.utils import call_gradio_client_api
+from app.db.database import SessionLocal
+from sqlalchemy import text
+
+async def get_songs_from_image(image: UploadFile):
+    image_bytes = await image.read()
+
+    # kosmos captions image
+    caption = call_gradio_client_api(
+        space_name="mestvnvo/Kosmos2-API",
+        input_data=image_bytes,
+        input_type="image"
+    )
+
+    # SmolLM2 turns caption to 'vibe'
+    vibe_string = call_gradio_client_api(
+        space_name="mestvnvo/SmolLM2-API",
+        input_data=caption,
+        input_type="text"
+    )
+
+    # MiniLM embeds 'vibe'
+    embedding = call_gradio_client_api(
+        space_name="mestvnvo/SentenceTransformer-API",
+        input_data=vibe_string,
+        input_type="text"
+    )
+
+    # pgvector similarity searches w/ embedding
+    async with SessionLocal() as session:
+        query = text('''
+            SELECT s.spotify_id, s.track_name, s.track_artist, s.deezer_id
+            FROM vectors v
+            JOIN songs s ON s.spotify_id = v.spotify_id
+            ORDER BY v.embedding <#> :embedding
+            LIMIT 8
+        ''')
+        result = await session.execute(query, {"embedding": embedding})
+        rows = result.fetchall()
+
+    return [
+        {
+            "spotify_id": row.spotify_id,
+            "track_name": row.track_name,
+            "track_artist": row.track_artist,
+            "deezer_id": row.deezer_id
+        }
+        for row in rows
+    ]
 
 async def insert_songs(songs):
     if not songs:
