@@ -1,12 +1,12 @@
+from fastapi import UploadFile
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import text
+
 from app.db.database import SessionLocal
 from app.db.models import Song as SongModel, VectorEmbedding
-from app.contracts.schema import SongWithEmbedding, InsertResult
-
-from fastapi import UploadFile
+from app.contracts.schema import InsertResult
 from app.services.utils import call_gradio_client_api
 from app.db.database import SessionLocal
-from sqlalchemy import text
 
 async def get_songs_from_image(image: UploadFile):
     image_bytes = await image.read()
@@ -87,12 +87,13 @@ async def insert_songs(songs):
                 inserted = song_result.rowcount or 0
                 skipped = len(songs) - inserted
                 status = "success" if skipped == 0 else "partial"
+                message = f"Inserted {inserted} song(s), skipped {skipped} duplicate(s)."
 
                 return InsertResult(
                     inserted=inserted,
                     skipped=skipped,
                     status=status,
-                    message=None
+                    message=message
                 )
 
             except Exception as e:

@@ -1,12 +1,12 @@
 from gradio_client import Client, handle_file
 import tempfile
-import os
+
 from app.core.config import settings
 
 def call_gradio_client_api(
     space_name: str,
     input_data: str | bytes,
-    input_type: str = "text",  # or "image"
+    input_type: str = "text",
     api_name: str = "/predict"
 ) -> any:
 
