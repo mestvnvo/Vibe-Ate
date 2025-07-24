@@ -1,6 +1,7 @@
 from fastapi import UploadFile
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy import text
+import numpy as np
 
 from app.db.database import SessionLocal
 from app.db.models import Song as SongModel, VectorEmbedding
@@ -32,6 +33,9 @@ async def get_songs_from_image(image: UploadFile):
         input_type="text"
     )
 
+    # Convert list to pgvector-compatible string
+    embedding_str = str(np.array(embedding).tolist())
+
     # pgvector similarity searches w/ embedding
     async with SessionLocal() as session:
         query = text('''
@@ -41,7 +45,7 @@ async def get_songs_from_image(image: UploadFile):
             ORDER BY v.embedding <#> :embedding
             LIMIT 8
         ''')
-        result = await session.execute(query, {"embedding": embedding})
+        result = await session.execute(query, {"embedding": embedding_str})
         rows = result.fetchall()
 
     return [

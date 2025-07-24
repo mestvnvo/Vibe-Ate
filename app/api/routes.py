@@ -9,7 +9,7 @@ from app.db.database import get_db
 
 router = APIRouter()
 
-@router.get("/vibe")
+@router.post("/vibe")
 async def get_songs(image: UploadFile = File(...)):
     return await get_songs_from_image(image)
 
